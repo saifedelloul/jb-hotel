@@ -11,24 +11,8 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({ onOpenBooking }) => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState('home');
   const { t, language, setLanguage } = useLanguage();
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // Lock body scroll when mobile menu is open
-  useEffect(() => {
-    if (isMobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-  }, [isMobileMenuOpen]);
 
   const navLinks = [
     { name: t.nav.home, href: '#home' },
@@ -45,8 +29,64 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenBooking }) => {
     { code: 'ar', label: 'AR' },
   ];
 
-  const handleLinkClick = () => {
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+
+      // Determine active section
+      const scrollPosition = window.scrollY + 150; // Offset for navbar
+      
+      // Default to home if at top
+      if (window.scrollY < 100) {
+        setActiveSection('home');
+        return;
+      }
+
+      for (const link of navLinks) {
+        const sectionId = link.href.substring(1);
+        const element = document.getElementById(sectionId);
+        
+        if (element) {
+          const offsetTop = element.offsetTop;
+          const offsetHeight = element.offsetHeight;
+          
+          if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
+            setActiveSection(sectionId);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [navLinks]);
+
+  // Lock body scroll when mobile menu is open
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+  }, [isMobileMenuOpen]);
+
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    e.preventDefault();
     setIsMobileMenuOpen(false);
+    
+    const targetId = href.substring(1);
+    
+    if (targetId === 'home') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setActiveSection('home');
+      return;
+    }
+
+    const element = document.getElementById(targetId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+      setActiveSection(targetId);
+    }
   };
 
   return (
@@ -67,16 +107,22 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenBooking }) => {
 
         {/* Desktop Nav */}
         <div className="hidden md:flex items-center gap-8">
-          {navLinks.map((link) => (
-            <a
-              key={link.name}
-              href={link.href}
-              className="text-hotel-ivory hover:text-hotel-gold transition-colors font-sans text-sm tracking-widest uppercase rtl:font-medium relative group"
-            >
-              {link.name}
-              <span className="absolute -bottom-1 left-0 w-0 h-px bg-hotel-gold transition-all duration-300 group-hover:w-full"></span>
-            </a>
-          ))}
+          {navLinks.map((link) => {
+            const isActive = activeSection === link.href.substring(1);
+            return (
+              <a
+                key={link.name}
+                href={link.href}
+                onClick={(e) => handleNavClick(e, link.href)}
+                className={`transition-colors font-sans text-sm tracking-widest uppercase rtl:font-medium relative group cursor-pointer ${
+                  isActive ? 'text-hotel-gold' : 'text-hotel-ivory hover:text-hotel-gold'
+                }`}
+              >
+                {link.name}
+                <span className={`absolute -bottom-1 left-0 h-px bg-hotel-gold transition-all duration-300 ${isActive ? 'w-full' : 'w-0 group-hover:w-full'}`}></span>
+              </a>
+            );
+          })}
           
           {/* Language Switcher */}
           <div className="flex items-center gap-2 border-l border-r border-hotel-ivory/20 px-4 mx-2">
@@ -132,16 +178,21 @@ export const Navbar: React.FC<NavbarProps> = ({ onOpenBooking }) => {
             <Logo size="lg" />
             <div className="w-12 h-px bg-hotel-gold/30"></div>
             
-            {navLinks.map((link) => (
-            <a
-                key={link.name}
-                href={link.href}
-                onClick={handleLinkClick}
-                className="text-2xl font-serif rtl:font-sans text-hotel-ivory hover:text-hotel-gold transition-colors py-2"
-            >
-                {link.name}
-            </a>
-            ))}
+            {navLinks.map((link) => {
+              const isActive = activeSection === link.href.substring(1);
+              return (
+                <a
+                    key={link.name}
+                    href={link.href}
+                    onClick={(e) => handleNavClick(e, link.href)}
+                    className={`text-2xl font-serif rtl:font-sans transition-colors py-2 cursor-pointer ${
+                      isActive ? 'text-hotel-gold' : 'text-hotel-ivory hover:text-hotel-gold'
+                    }`}
+                >
+                    {link.name}
+                </a>
+              );
+            })}
             
             <button 
             onClick={() => {

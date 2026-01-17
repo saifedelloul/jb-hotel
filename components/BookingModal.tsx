@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, Users, Check } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { supabase } from '../lib/supabase';
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -10,9 +11,9 @@ interface BookingModalProps {
 
 export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, preSelectedRoom }) => {
   const { t } = useLanguage();
-  const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     checkIn: '',
@@ -32,14 +33,33 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, pre
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // Simulate API call
-    setTimeout(() => {
-      setLoading(false);
+    setErrorMsg(null);
+
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .insert({
+          check_in: formData.checkIn,
+          check_out: formData.checkOut,
+          room_type: formData.roomType,
+          guests: parseInt(formData.guests),
+          full_name: formData.name,
+          email: formData.email,
+          phone: formData.phone
+        });
+
+      if (error) throw error;
+
       setSuccess(true);
-    }, 1500);
+    } catch (err: any) {
+      console.error('Error submitting booking:', err);
+      setErrorMsg('Something went wrong. Please try again or contact us directly.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const today = new Date().toISOString().split('T')[0];
@@ -61,6 +81,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({ isOpen, onClose, pre
             <p className="text-hotel-ivory/60 text-center mb-8 text-sm uppercase tracking-widest">
               Best Rates Guaranteed
             </p>
+
+            {errorMsg && (
+              <div className="bg-red-500/10 border border-red-500/50 text-red-200 px-4 py-2 rounded mb-6 text-sm text-center">
+                {errorMsg}
+              </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-6">
               

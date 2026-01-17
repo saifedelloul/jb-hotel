@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { MapPin, Phone, Mail } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { supabase } from '../lib/supabase';
 
 export const Contact: React.FC = () => {
   const { t } = useLanguage();
+  const [loading, setLoading] = useState(false);
 
   const [formData, setFormData] = useState({
     fname: '',
@@ -88,10 +90,41 @@ export const Contact: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validate()) {
-       alert("Booking Request Validated! (Processing logic would go here)");
+       setLoading(true);
+       try {
+         const { error } = await supabase
+           .from('contact_requests')
+           .insert({
+             first_name: formData.fname,
+             last_name: formData.lname,
+             email: formData.email,
+             phone: formData.phone,
+             check_in: formData.checkin,
+             check_out: formData.checkout,
+             message: formData.special
+           });
+         
+         if (error) throw error;
+         
+         alert("Booking Request Sent Successfully!");
+         setFormData({
+            fname: '',
+            lname: '',
+            email: '',
+            phone: '',
+            checkin: '',
+            checkout: '',
+            special: ''
+         });
+       } catch (error) {
+         console.error('Error submitting contact form:', error);
+         alert("There was an error submitting your request. Please try again.");
+       } finally {
+         setLoading(false);
+       }
     }
   };
 
@@ -151,8 +184,12 @@ export const Contact: React.FC = () => {
                   className="w-full bg-transparent border-b border-hotel-ivory/30 py-4 text-hotel-ivory placeholder-hotel-ivory/40 focus:outline-none focus:border-hotel-gold transition-colors rtl:text-right text-base"
                 ></textarea>
                 
-                <button type="submit" className="bg-hotel-gold text-hotel-dark w-full py-4 uppercase tracking-[0.2em] font-bold hover:bg-white transition-all duration-300 rtl:tracking-normal rtl:font-sans text-sm md:text-lg rounded-sm mt-4">
-                    {t.contact.cta}
+                <button 
+                  type="submit" 
+                  disabled={loading}
+                  className="bg-hotel-gold text-hotel-dark w-full py-4 uppercase tracking-[0.2em] font-bold hover:bg-white transition-all duration-300 rtl:tracking-normal rtl:font-sans text-sm md:text-lg rounded-sm mt-4 disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                    {loading ? 'Sending...' : t.contact.cta}
                 </button>
             </form>
           </div>
